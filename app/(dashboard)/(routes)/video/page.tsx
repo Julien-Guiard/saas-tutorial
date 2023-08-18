@@ -3,7 +3,7 @@
 import { useState } from "react";
 import axios from "axios";
 import * as z from "zod";
-import { MessageSquare, User } from "lucide-react";
+import { Video } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -15,18 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Empty } from "@/components/empty";
 
 import { formSchema } from "./constants";
-import { ChatCompletionRequestMessage } from "openai";
 import { Loader } from "@/components/loader";
-import { cn } from "@/lib/utils";
-import { UserAvatar } from "@/components/user-avatar";
-import { BotAvatar } from "@/components/bot-avatar";
 import { useProModal } from "@/hooks/use-pro-modal";
 
-const ConversationPage = () => {
+const VideoPage = () => {
   const proModal = useProModal();
   const router = useRouter();
 
-  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+  const [video, setVideo] = useState<string>();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,17 +35,12 @@ const ConversationPage = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const userMessage: ChatCompletionRequestMessage = {
-        role: "user",
-        content: values.prompt,
-      };
-      const newMessages = [...messages, userMessage];
+      setVideo(undefined);
 
-      const response = await axios.post("/api/conversation", {
-        messages: newMessages,
-      });
+      const response = await axios.post("/api/video", values);
 
-      setMessages((current) => [...current, userMessage, response.data]);
+      setVideo(response.data[0]);
+
       form.reset();
     } catch (error: any) {
       if (error?.response?.status === 403) {
@@ -63,11 +54,11 @@ const ConversationPage = () => {
   return (
     <div>
       <Heading
-        title="Conversation"
-        description="This is the conversation page"
-        icon={MessageSquare}
-        iconColor="text-violet-500"
-        bgColor="bg-violet-500/10"
+        title="Video Generation"
+        description="This is the video generation page"
+        icon={Video}
+        iconColor="text-emerald-500"
+        bgColor="bg-emerald-500/10"
       />
       <div className="px-4 lg:px-8">
         <div>
@@ -84,7 +75,7 @@ const ConversationPage = () => {
                       <Input
                         className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
                         disabled={isLoading}
-                        placeholder="How do I calculate the radius of a circle ?"
+                        placeholder="Nemo watching the sky"
                         {...field}
                       />
                     </FormControl>
@@ -106,31 +97,23 @@ const ConversationPage = () => {
               <Loader />
             </div>
           )}
-          {messages.length === 0 && !isLoading && (
+          {!video && !isLoading && (
             <div>
-              <Empty label="No conversation started." />
+              <Empty label="No video generated." />
             </div>
           )}
-          <div className="flex flex-col-reverse gap-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={message.content}
-                className={cn(
-                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                  message.role === "user"
-                    ? "bg-white border border-black/10"
-                    : "bg-muted",
-                )}
-              >
-                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-                <p className="text-sm">{message.content}</p>
-              </div>
-            ))}
-          </div>
+          {video && (
+            <video
+              className="w-full aspect-video mt-8 rounded-lg border bg-black"
+              controls
+            >
+              <source src={video} />
+            </video>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default ConversationPage;
+export default VideoPage;
